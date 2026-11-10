@@ -1,0 +1,7 @@
+# Pins the ArgoCD install manifest to a specific release tag rather than
+# vendoring the ~10k-line manifest by hand (error-prone to keep in sync).
+# `kubectl apply -k` resolves this remote resource at apply time; bumping
+# the version later is a one-line change here.
+resources:
+  - namespace.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.1/manifests/install.yaml

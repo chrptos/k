@@ -1,0 +1,27 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Real tfvars (contains actual project IDs/values) — keep only *.tfvars.example in git
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Local kubeconfig / credentials, in case one ever ends up in the repo dir
+kubeconfig
+kubeconfig.yaml
+*.kubeconfig
+*-key.json
+*credentials*.json
+
+# OS / editor
+.DS_Store

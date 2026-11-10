@@ -1,0 +1,38 @@
+# The only Application resource ever applied manually. It auto-discovers
+# every directory under clusters/ (currently just clusters/dev) and creates
+# a child Application for each — adding clusters/prod/ later needs no
+# change here.
+#
+# repoURL below is <GIT_REPO_URL> as a placeholder — don't edit it here.
+# It's filled in at `kubectl apply -k bootstrap` time via kustomization.yaml's
+# `replacements`, sourced from git-repo.yaml (edit that file instead).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: clusters
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: <GIT_REPO_URL>
+        revision: main
+        directories:
+          - path: clusters/*
+  template:
+    metadata:
+      name: "cluster-{{path.basename}}"
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: <GIT_REPO_URL>
+        targetRevision: main
+        path: "{{path}}"
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

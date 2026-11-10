@@ -1,0 +1,42 @@
+name: manifest-lint
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "infra-config/**"
+      - "clusters/**"
+      - "bootstrap/**"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar xz -C /usr/local/bin kubeconform
+
+      - name: yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: apps clusters infra-config bootstrap
+          strict: false
+
+      - name: build every Kustomize overlay
+        run: |
+          set -euo pipefail
+          for overlay in $(find apps infra-config -type d -path '*/overlays/*' -mindepth 1); do
+            echo "::group::kustomize build $overlay"
+            kubectl kustomize "$overlay" > /tmp/rendered.yaml
+            kubeconform -strict -summary -ignore-missing-schemas /tmp/rendered.yaml
+            echo "::endgroup::"
+          done
+
+      - name: validate ArgoCD Application/ApplicationSet manifests
+        run: |
+          set -euo pipefail
+          kubeconform -strict -summary -ignore-missing-schemas \
+            clusters/dev/apps.yaml bootstrap/root-appset.yaml

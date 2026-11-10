@@ -1,0 +1,16 @@
+resources:
+  - root-appset.yaml
+  - git-repo.yaml
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: git-repo-config
+      fieldPath: data.repoURL
+    targets:
+      - select:
+          kind: ApplicationSet
+          name: clusters
+        fieldPaths:
+          - spec.generators.0.git.repoURL
+          - spec.template.spec.source.repoURL

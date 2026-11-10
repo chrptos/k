@@ -1,0 +1,56 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    paths:
+      - "terraform/**"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/gke
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: terraform fmt -check
+        run: terraform fmt -check -recursive
+
+      # No backend/credentials configured in CI on purpose — this job is
+      # validation-only. `init -backend=false` skips remote state and GCP
+      # auth entirely, so `plan` below is a syntax/type check, not a real
+      # plan against live infrastructure.
+      - name: terraform init (no backend)
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform validate
+
+      # Real `terraform plan` against GCP is optional and only runs once
+      # Workload Identity Federation for GitHub Actions is set up (see
+      # README "前提作業") and these repo secrets exist. Without them this
+      # step is skipped — fmt/validate above still catch most issues.
+      - name: authenticate to GCP
+        if: ${{ env.WORKLOAD_IDENTITY_PROVIDER != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.TERRAFORM_SERVICE_ACCOUNT }}
+        env:
+          WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          TERRAFORM_SERVICE_ACCOUNT: ${{ secrets.GCP_TERRAFORM_SERVICE_ACCOUNT }}
+
+      - name: terraform plan
+        if: ${{ env.WORKLOAD_IDENTITY_PROVIDER != '' }}
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=${{ secrets.GCP_TFSTATE_BUCKET }}" \
+            -backend-config="prefix=gke/dev"
+          terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}"
+        env:
+          WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}

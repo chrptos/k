@@ -1,0 +1,10 @@
+# Single source of truth for this repo's clone URL, used by
+# kustomization.yaml's `replacements` to fill in apps.yaml without
+# repeating the value. Edit only this file.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: git-repo-config
+  namespace: argocd
+data:
+  repoURL: "<GIT_REPO_URL>"

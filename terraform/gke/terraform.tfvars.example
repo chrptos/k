@@ -1,0 +1,3 @@
+project_id   = "your-gcp-project-id"
+region       = "your-gcp-region"   # e.g. asia-northeast1
+cluster_name = "your-cluster-name" # e.g. gitops-dev

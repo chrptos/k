@@ -1,0 +1,84 @@
+# Child Applications for the "dev" cluster. The cluster-dev Application
+# (created by bootstrap/root-appset.yaml) points its source at this
+# directory, so ArgoCD applies these Application manifests directly —
+# this is the classic "app of apps" pattern.
+#
+# ESO's controller is installed straight from its Helm chart (ArgoCD
+# renders Helm natively) rather than vendoring the chart's ~30k-line
+# rendered output into git. Replace <PROJECT_ID> below to match
+# terraform/gke/terraform.tfvars before first sync (see README).
+#
+# repoURL below is <GIT_REPO_URL> as a placeholder — don't edit it here.
+# It's filled in by kustomization.yaml's `replacements`, sourced from
+# git-repo.yaml (edit that file instead).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-secrets-operator-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    targetRevision: 2.15.0
+    helm:
+      values: |
+        installCRDs: true
+        serviceAccount:
+          name: external-secrets
+          annotations:
+            iam.gke.io/gcp-service-account: external-secrets@<PROJECT_ID>.iam.gserviceaccount.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Namespace + ClusterSecretStore config (kept separate from the operator
+# install above so this stays plain Kustomize, not mixed Helm+Kustomize).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-secrets-config-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: <GIT_REPO_URL>
+    targetRevision: main
+    path: infra-config/external-secrets/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-world-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: <GIT_REPO_URL>
+    targetRevision: main
+    path: apps/hello-world/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hello-world
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
